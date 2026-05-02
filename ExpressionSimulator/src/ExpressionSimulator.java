@@ -38,7 +38,13 @@ public class ExpressionSimulator {
         
         // Step 3: Convert to postfix
         ExpressionConverter converter = new ExpressionConverter();
-        Queue<Token> postfixTokens = converter.infixToPostfix(infixTokens);
+        Queue<Token> postfixTokens;
+        try {
+            postfixTokens = converter.infixToPostfix(infixTokens);
+        } catch (IllegalArgumentException e) {
+            writeError(e.getMessage());
+            return;
+        }
         
         // Step 4: Evaluate postfix
         Evaluator evaluator = new Evaluator();
