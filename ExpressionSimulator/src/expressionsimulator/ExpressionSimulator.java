@@ -50,9 +50,9 @@ public class ExpressionSimulator {
             return;
         }
         
-        // Step 5: Build BST
+        // Step 5: Build Expression Tree
         BST bst = new BST();
-        bst.buildFromTokens(infixTokens);
+        bst.buildExpressionTree(postfixTokens);
         
         // Step 6: Hash Table
         HashTable hashTable = new HashTable(10); // User-defined size
