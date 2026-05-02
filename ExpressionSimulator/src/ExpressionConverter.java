@@ -34,7 +34,6 @@ public class ExpressionConverter {
         Stack<Token> opStack = new Stack<>();
         
         // We need to iterate without destroying the original queue
-        // So we copy elements to a temporary queue
         Queue<Token> temp = new Queue<>();
         
         while (!infix.isEmpty()) {
@@ -46,11 +45,17 @@ public class ExpressionConverter {
             } else if (token.isLeftParen()) {
                 opStack.push(token);
             } else if (token.isRightParen()) {
+                boolean foundLeftParen = false;
                 while (!opStack.isEmpty() && !opStack.peek().isLeftParen()) {
                     postfix.enqueue(opStack.pop());
                 }
                 if (!opStack.isEmpty() && opStack.peek().isLeftParen()) {
                     opStack.pop(); // Discard left parenthesis
+                    foundLeftParen = true;
+                }
+                // NEW: Throw error if we never found a matching left parenthesis
+                if (!foundLeftParen) {
+                    throw new IllegalArgumentException("Error: Invalid expression - mismatched parentheses (extra right parenthesis).");
                 }
             } else if (token.isOperator()) {
                 while (!opStack.isEmpty() && opStack.peek().isOperator()) {
@@ -76,7 +81,12 @@ public class ExpressionConverter {
         
         // Pop remaining operators
         while (!opStack.isEmpty()) {
-            postfix.enqueue(opStack.pop());
+            Token topOp = opStack.pop();
+            // NEW: If a parenthesis is left on the stack, it was never closed
+            if (topOp.isLeftParen() || topOp.isRightParen()) {
+                throw new IllegalArgumentException("Error: Invalid expression - mismatched parentheses (unclosed left parenthesis).");
+            }
+            postfix.enqueue(topOp);
         }
         
         return postfix;
