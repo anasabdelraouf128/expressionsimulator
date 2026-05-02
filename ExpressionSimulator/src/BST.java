@@ -1,6 +1,6 @@
 /**
- * Binary Search Tree implementation.
- * Supports insertion and three traversal methods.
+ * Expression Tree implementation (fulfills the BST requirement).
+ * Builds the tree from a postfix expression and supports traversals.
  */
 public class BST {
     private BSTNode root;
@@ -13,45 +13,39 @@ public class BST {
     }
     
     /**
-     * Inserts a value into the BST.
+     * Builds the Expression Tree using the Postfix Queue.
      */
-    public void insert(double value) {
-        root = insertRecursive(root, value);
-    }
-    
-    private BSTNode insertRecursive(BSTNode node, double value) {
-        if (node == null) {
-            return new BSTNode(value);
-        }
-        
-        if (value < node.data) {
-            node.left = insertRecursive(node.left, value);
-        } else if (value > node.data) {
-            node.right = insertRecursive(node.right, value);
-        }
-        // Duplicate values are ignored
-        
-        return node;
-    }
-    
-    /**
-     * Builds BST from infix tokens (only numbers are inserted).
-     */
-    public void buildFromTokens(Queue<Token> infix) {
+    public void buildExpressionTree(Queue<Token> postfix) {
+        Stack<BSTNode> stack = new Stack<>();
         Queue<Token> temp = new Queue<>();
         
-        while (!infix.isEmpty()) {
-            Token token = infix.dequeue();
-            temp.enqueue(token);
+        while (!postfix.isEmpty()) {
+            Token token = postfix.dequeue();
+            temp.enqueue(token); // Save to restore the queue later
             
             if (token.isNumber()) {
-                insert(Double.parseDouble(token.getValue()));
+                // If operand, create a leaf node and push to stack
+                stack.push(new BSTNode(token.getValue()));
+            } else if (token.isOperator()) {
+                // If operator, pop two nodes, make them children, and push back
+                BSTNode node = new BSTNode(token.getValue());
+                
+                // Note: The first popped is the right child, second is the left
+                node.right = stack.pop();
+                node.left = stack.pop();
+                
+                stack.push(node);
             }
         }
         
-        // Restore queue
+        // Restore the original postfix queue so it can be printed later
         while (!temp.isEmpty()) {
-            infix.enqueue(temp.dequeue());
+            postfix.enqueue(temp.dequeue());
+        }
+        
+        // The final node in the stack is the root of the tree
+        if (!stack.isEmpty()) {
+            root = stack.pop();
         }
     }
     
