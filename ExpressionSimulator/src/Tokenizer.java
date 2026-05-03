@@ -1,14 +1,25 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Tokenizer {
     
-    public String readExpression() throws IOException {
+    // NEW: Now returns a List of Strings instead of a single String
+    public List<String> readExpressions() throws IOException {
+        List<String> lines = new ArrayList<>();
         BufferedReader reader = new BufferedReader(new FileReader("input.txt"));
-        String line = reader.readLine();
+        String line;
+        
+        // Loop through all lines until the end of the file
+        while ((line = reader.readLine()) != null) {
+            if (!line.trim().isEmpty()) { // Ignore completely blank lines
+                lines.add(line.trim());
+            }
+        }
         reader.close();
-        return line != null ? line.trim() : "";
+        return lines;
     }
     
     public Queue<Token> tokenize(String expression) throws IllegalArgumentException {
@@ -23,13 +34,11 @@ public class Tokenizer {
         while (i < len) {
             char ch = expression.charAt(i);
             
- 
             if (Character.isWhitespace(ch)) {
                 i++;
                 continue;
             }
             
-  
             if (Character.isDigit(ch) || ch == '.' || 
                 (ch == '-' && isNegativeNumber(expression, i))) {
                 
