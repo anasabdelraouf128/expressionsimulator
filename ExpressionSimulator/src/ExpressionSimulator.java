@@ -1,80 +1,107 @@
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Main class that orchestrates the Expression Simulator.
- * Reads from input.txt, processes the expression, and writes to output.txt.
+ * Reads from input.txt, processes all expressions, and writes to output.txt.
  */
 public class ExpressionSimulator {
     
     public static void main(String[] args) {
+        // 1. Clear the output.txt file at the very beginning of the run
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
+            writer.write(""); 
+        } catch (IOException e) {
+            System.err.println("Error initializing output.txt");
+        }
+        
         try {
             runSimulation();
         } catch (Exception e) {
-            writeError(e.getMessage());
+            writeError("System Error: " + e.getMessage());
         }
     }
     
     private static void runSimulation() {
-        // Step 1: Read input
         Tokenizer tokenizer = new Tokenizer();
-        String expression;
+        List<String> expressions;
+        
+        // Step 1: Read all inputs
         try {
-            expression = tokenizer.readExpression();
+            expressions = tokenizer.readExpressions();
         } catch (IOException e) {
             writeError("Error: Could not read input.txt. " + e.getMessage());
             return;
         }
         
-        // Step 2: Tokenize
-        Queue<Token> infixTokens;
-        try {
-            infixTokens = tokenizer.tokenize(expression);
-        } catch (IllegalArgumentException e) {
-            writeError(e.getMessage());
+        if (expressions.isEmpty()) {
+            writeError("Error: input.txt is empty or contains only blank lines.");
             return;
         }
-        
-        // Step 3: Convert to postfix
-        ExpressionConverter converter = new ExpressionConverter();
-        Queue<Token> postfixTokens;
-        try {
-            postfixTokens = converter.infixToPostfix(infixTokens);
-        } catch (IllegalArgumentException e) {
-            writeError(e.getMessage());
-            return;
+
+        // Loop through every line in the file
+        for (int i = 0; i < expressions.size(); i++) {
+            String expression = expressions.get(i);
+            
+            // Add a visual separator for each new expression in the output file
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt", true))) {
+                writer.write("##################################################\n");
+                writer.write("           PROCESSING EXPRESSION #" + (i + 1) + "\n");
+                writer.write("##################################################\n\n");
+            } catch (IOException e) { }
+            
+            // Step 2: Tokenize
+            Queue<Token> infixTokens;
+            try {
+                infixTokens = tokenizer.tokenize(expression);
+            } catch (IllegalArgumentException e) {
+                writeError("Expression: " + expression + "\n" + e.getMessage());
+                continue; // Skip to the next line instead of stopping the whole program
+            }
+            
+            // Step 3: Convert to postfix
+            ExpressionConverter converter = new ExpressionConverter();
+            Queue<Token> postfixTokens;
+            try {
+                postfixTokens = converter.infixToPostfix(infixTokens);
+            } catch (IllegalArgumentException e) {
+                writeError("Expression: " + expression + "\n" + e.getMessage());
+                continue;
+            }
+            
+            // Step 4: Evaluate postfix
+            Evaluator evaluator = new Evaluator();
+            double result;
+            try {
+                result = evaluator.evaluate(postfixTokens);
+            } catch (ArithmeticException | IllegalArgumentException e) {
+                writeError("Expression: " + expression + "\n" + e.getMessage()); 
+                continue;
+            }
+            
+            // Step 5: Build Expression Tree
+            BST bst = new BST();
+            bst.buildExpressionTree(postfixTokens);
+            
+            // Step 6: Hash Table
+            HashTable hashTable = new HashTable(10); // User-defined size
+            hashTable.populateFromTokens(infixTokens);
+            
+            // Step 7: Write output
+            writeOutput(expression, infixTokens, postfixTokens, result, bst, hashTable);
         }
-        
-        // Step 4: Evaluate postfix
-        Evaluator evaluator = new Evaluator();
-        double result;
-        try {
-            result = evaluator.evaluate(postfixTokens);
-        } catch (ArithmeticException | IllegalArgumentException e) {
-            writeError(e.getMessage()); 
-            return;
-        }
-        
-        // Step 5: Build Expression Tree
-        BST bst = new BST();
-        bst.buildExpressionTree(postfixTokens);
-        
-        // Step 6: Hash Table
-        HashTable hashTable = new HashTable(10); // User-defined size
-        hashTable.populateFromTokens(infixTokens);
-        
-        // Step 7: Write output
-        writeOutput(expression, infixTokens, postfixTokens, result, bst, hashTable);
     }
     
     /**
-     * Writes all results to output.txt.
+     * Writes all results to output.txt using APPEND MODE (true).
      */
     private static void writeOutput(String expression, Queue<Token> infix, 
                                     Queue<Token> postfix, double result,
                                     BST bst, HashTable hashTable) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
+        // Notice the 'true' below—this ensures we add to the file, not overwrite it
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt", true))) {
             
             writer.write("========================================\n");
             writer.write("      EXPRESSION SIMULATOR RESULTS      \n");
@@ -94,7 +121,6 @@ public class ExpressionSimulator {
             
             // Evaluation Result
             writer.write("EVALUATION RESULT:\n");
-            // Format result (remove .0 if integer)
             if (result == (long) result) {
                 writer.write(String.valueOf((long) result) + "\n\n");
             } else {
@@ -126,7 +152,7 @@ public class ExpressionSimulator {
             
             writer.write("========================================\n");
             writer.write("           SIMULATION COMPLETE          \n");
-            writer.write("========================================\n");
+            writer.write("========================================\n\n\n");
             
         } catch (IOException e) {
             System.err.println("Error writing to output.txt: " + e.getMessage());
@@ -134,15 +160,16 @@ public class ExpressionSimulator {
     }
     
     /**
-     * Writes error message to output.txt.
+     * Writes error message to output.txt using APPEND MODE (true).
      */
     private static void writeError(String message) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt"))) {
+        // Notice the 'true' here as well
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("output.txt", true))) {
             writer.write("========================================\n");
             writer.write("      EXPRESSION SIMULATOR ERROR        \n");
             writer.write("========================================\n\n");
             writer.write(message + "\n\n");
-            writer.write("========================================\n");
+            writer.write("========================================\n\n\n");
         } catch (IOException e) {
             System.err.println("Critical error: Cannot write to output.txt");
         }
